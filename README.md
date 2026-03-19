@@ -5,8 +5,11 @@ WAR Overlay Type: `cas-overlay`
 
 # Versions
 
-- CAS Server `7.1.3`
+- CAS Server `7.3.4`
+- Spring Boot `3.5.6`
+- Gradle `9.1.0`
 - JDK `21`
+- Base image `eclipse-temurin:21-jre-alpine`
 
 # Build
 
@@ -141,22 +144,14 @@ Deploy the binary web application file in `build/libs` after a successful build 
 
 The following strategies outline how to build and deploy CAS Docker images.
 
-## Jib
-
-The overlay embraces the [Jib Gradle Plugin](https://github.com/GoogleContainerTools/jib) to provide easy-to-use out-of-the-box tooling for building CAS docker images. Jib is an open-source Java containerizer from Google that lets Java developers build containers using the tools they know. It is a container image builder that handles all the steps of packaging your application into a container image. It does not require you to write a Dockerfile or have Docker installed, and it is directly integrated into the overlay.
-
-```bash
-# Running this task requires that you have Docker installed and running.
-./gradlew build jibDockerBuild
-```
-
 ## Dockerfile
 
-You can also use the Docker tooling and the provided `Dockerfile` to build and run.
-There are dedicated Gradle tasks available to build and push Docker images using the supplied `DockerFile`:
+The primary method for building and publishing CAS Docker images. The provided `Dockerfile` uses a
+multi-stage build with `eclipse-temurin:21-jdk-alpine` for building and `eclipse-temurin:21-jre-alpine`
+for the minimal runtime image. This is the method used by the CI/CD pipeline.
 
 ```bash
-./gradlew build casBuildDockerImage
+./gradlew casBuildDockerImage
 ```
 
 Once ready, you may also push the images:
@@ -170,8 +165,18 @@ using system properties via `-DdockerUsername=...` and `-DdockerPassword=...`.
 
 A `docker-compose.yml` is also provided to orchestrate the build:
 
-```bash  
+```bash
 docker-compose build
+```
+
+## Jib
+
+As an alternative, the overlay also supports the [Jib Gradle Plugin](https://github.com/GoogleContainerTools/jib),
+which builds container images without requiring a local Docker daemon.
+
+```bash
+# Running this task requires Docker installed and running (for jibDockerBuild).
+./gradlew build jibDockerBuild
 ```
 
     
