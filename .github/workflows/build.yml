@@ -41,7 +41,7 @@ jobs:
           export: containerImageOrg,containerImageName,version
 
       - name: Build container
-        run: ./gradlew jibDockerBuild --no-daemon
+        run: ./gradlew casBuildDockerImage --no-daemon
 
       - name: Transform repository owner to lowercase
         run: |
