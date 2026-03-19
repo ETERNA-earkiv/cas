@@ -79,11 +79,20 @@ bootRun {
 
 springBoot {
     mainClass = "org.apereo.cas.web.CasWebApplication"
-    
+
 }
 
+def wireOverlayDependency = { Task t ->
+    ["extractCasBootWarOverlay", "processTestResources", "compileJava", "compileGraalJava"]
+        .collect { tasks.findByName(it) }
+        .findAll { it != null }
+        .each { t.dependsOn(it) }
+}
+tasks.named("cyclonedxBom").configure { wireOverlayDependency(delegate) }
+tasks.named("cyclonedxDirectBom").configure { wireOverlayDependency(delegate) }
 
 bootWar {
+    dependsOn cyclonedxBom
     def executable = project.hasProperty("executable") && Boolean.valueOf(project.getProperty("executable"))
     if (executable) {
         logger.info "Including launch script for executable WAR artifact"
@@ -119,7 +128,7 @@ bootWar {
 
             def excludeArtifacts = ["WEB-INF/lib/servlet-api-2*.jar"]
             if (project.hasProperty("tomcatVersion")) {
-                excludes += ["WEB-INF/lib/tomcat-*.jar"]
+                excludeArtifacts += "WEB-INF/lib/tomcat-*.jar"
             }
             excludes = excludeArtifacts
 

@@ -1,6 +1,7 @@
-ARG BASE_IMAGE="azul/zulu-openjdk:21"
+ARG BUILD_IMAGE="eclipse-temurin:21-jdk-alpine"
+ARG BASE_IMAGE="eclipse-temurin:21-jre-alpine"
 
-FROM $BASE_IMAGE AS overlay
+FROM $BUILD_IMAGE AS overlay
 
 ARG EXT_BUILD_COMMANDS=""
 ARG EXT_BUILD_OPTIONS=""
@@ -16,7 +17,7 @@ RUN mkdir -p ~/.gradle \
     && chmod 750 ./gradlew \
     && ./gradlew --version;
 
-RUN ./gradlew clean build $EXT_BUILD_COMMANDS --parallel --no-daemon -Pexecutable=false $EXT_BUILD_OPTIONS;
+RUN ./gradlew clean build $EXT_BUILD_COMMANDS --parallel --no-daemon -Pexecutable=false -PjvmVendor=ADOPTIUM $EXT_BUILD_OPTIONS;
 
 RUN java -Djarmode=tools -jar build/libs/cas.war extract \
     && java -XX:ArchiveClassesAtExit=./cas/cas.jsa -Dspring.context.exit=onRefresh -jar cas/cas.war
@@ -26,11 +27,13 @@ FROM $BASE_IMAGE AS cas
 LABEL "Organization"="Apereo"
 LABEL "Description"="Apereo CAS"
 
-RUN mkdir -p /etc/cas/config \
+RUN apk upgrade --no-cache \
+    && apk del --no-cache gnupg gnupg-dirmngr gnupg-gpgconf gnupg-keyboxd gnupg-utils gnupg-wks-client gpg gpg-agent gpg-wks-server gpgsm gpgv 2>/dev/null || true \
+    && mkdir -p /etc/cas/config \
     && mkdir -p /etc/cas/services \
-    && mkdir -p /etc/cas/saml;
+    && mkdir -p /etc/cas/saml
 
-WORKDIR cas-overlay
+WORKDIR /cas-overlay
 COPY --from=overlay /cas-overlay/cas cas/
 
 COPY etc/cas/ /etc/cas/
