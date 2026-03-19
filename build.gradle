@@ -21,11 +21,11 @@ buildscript {
         mavenCentral()
         gradlePluginPortal()
         maven {
-            url 'https://oss.sonatype.org/content/repositories/snapshots'
+            url = 'https://central.sonatype.com/repository/maven-snapshots/'
             mavenContent { snapshotsOnly() }
         }
         maven {
-            url "https://repo.spring.io/milestone"
+            url = "https://repo.spring.io/milestone"
             mavenContent { releasesOnly() }
         }
     }
@@ -35,9 +35,10 @@ buildscript {
         classpath "io.freefair.gradle:lombok-plugin:${project.gradleFreeFairPluginVersion}"
         classpath "com.google.cloud.tools:jib-gradle-plugin:${project.jibVersion}"
         classpath "com.bmuschko:gradle-docker-plugin:${project.gradleDockerPluginVersion}"
+        classpath "org.cyclonedx:cyclonedx-gradle-plugin:${project.gradleCyclonePluginVersion}"
         classpath "de.undercouch:gradle-download-task:${project.gradleDownloadTaskVersion}"
         classpath "org.apereo.cas:cas-server-core-api-configuration-model:${project.'cas.version'}"
-        classpath "org.apereo.cas:cas-server-core-configuration-metadata-repository:${project.'cas.version'}"
+        classpath "org.apereo.cas:cas-server-support-configuration-metadata-repository:${project.'cas.version'}"
     }
 }
 
@@ -53,9 +54,9 @@ repositories {
     }
     mavenLocal()
     mavenCentral()
-    maven { url 'https://oss.sonatype.org/content/repositories/releases' }
+    maven { url = 'https://oss.sonatype.org/content/repositories/releases' }
     maven {
-        url 'https://oss.sonatype.org/content/repositories/snapshots'
+        url = 'https://central.sonatype.com/repository/maven-snapshots/'
         mavenContent { snapshotsOnly() }
     }
     maven {
@@ -81,7 +82,11 @@ apply plugin: "war"
 
 apply plugin: "org.springframework.boot"
 apply plugin: "io.freefair.lombok"
+lombok {
+    version = "${project.lombokVersion}"
+}
 
+apply plugin: "org.cyclonedx.bom"
 
 
 apply from: rootProject.file("gradle/springboot.gradle")
@@ -90,6 +95,7 @@ apply plugin: "com.bmuschko.docker-remote-api"
 apply from: rootProject.file("gradle/tasks.gradle")
 
 def out = services.get(StyledTextOutputFactory).create("cas")
+def configurationCacheRequested = services.get(BuildFeatures).configurationCache.requested.getOrElse(true)
 
 configurations {
     all {
@@ -128,14 +134,11 @@ war {
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(project.targetCompatibility)
+
         def chosenJvmVendor = null
-        JvmVendorSpec.declaredFields.each { field ->
-            if (field.type == JvmVendorSpec && Modifier.isStatic(field.getModifiers())) {
-                if (field.name == project.jvmVendor?.toUpperCase()) {
-                    chosenJvmVendor = field.get(null)
-                    return
-                }
-            }
+        if (project.jvmVendor != null) {
+            out.withStyle(Style.Info).println("JVM vendor ${project.jvmVendor} is requested for the Java toolchain")
+            chosenJvmVendor = JvmVendorSpec.of(project.jvmVendor?.toUpperCase())
         }
         if (chosenJvmVendor != null) {
             vendor = chosenJvmVendor
@@ -152,11 +155,9 @@ bootBuildImage {
 
 
 ['jibDockerBuild', 'jibBuildTar', 'jib'].each { taskName ->
-    if (gradle.gradleVersion >= "8.0") {
-        getTasksByName(taskName, true).each(it -> {
-            it.notCompatibleWithConfigurationCache("Jib is not compatible with configuration cache");
-            it.enabled = !gradle.startParameter.isConfigurationCacheRequested()
-        })
+    getTasksByName(taskName, true).each { t ->
+        t.notCompatibleWithConfigurationCache("Jib is not compatible with configuration cache")
+        t.enabled = !configurationCacheRequested
     }
 }
 
@@ -166,7 +167,7 @@ def dockerPassword = providers.systemProperty("dockerPassword").getOrNull()
 def imageTagPostFix = providers.systemProperty("dockerImageTagPostfix").getOrElse("")
 
 jib {
-    if (gradle.gradleVersion >= "8.0" && gradle.startParameter.isConfigurationCacheRequested()) {
+    if (configurationCacheRequested) {
         out.withStyle(Style.Info).println("You are seeing this message because the Gradle configuration cache is turned on")
         out.withStyle(Style.Info).println("Running Jib tasks to produce Docker images will require the command-line option: --no-configuration-cache")
         out.withStyle(Style.Info).println("Jib does not support the Gradle configuration cache; Please see https://github.com/GoogleContainerTools/jib/issues/3132")
@@ -282,7 +283,7 @@ dependencies {
     implementation "org.apereo.cas:cas-server-core-api-configuration-model"
     implementation "org.apereo.cas:cas-server-webapp-init"
 
-    if (appServer == 'tomcat') {
+    if (appServer == '-tomcat') {
         implementation "org.apereo.cas:cas-server-webapp-init-tomcat"
     }
     

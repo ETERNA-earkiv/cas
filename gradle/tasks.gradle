@@ -5,6 +5,7 @@ import org.gradle.internal.logging.text.*
 
 import groovy.json.*
 import groovy.time.*
+import groovy.xml.*
 
 import java.nio.file.*
 import java.util.*
@@ -16,7 +17,7 @@ buildscript {
         mavenCentral()
         gradlePluginPortal()
         maven {
-            url 'https://oss.sonatype.org/content/repositories/snapshots'
+            url = 'https://central.sonatype.com/repository/maven-snapshots/'
             mavenContent { snapshotsOnly() }
         }
         maven {
@@ -26,22 +27,23 @@ buildscript {
     }
     dependencies {
         classpath "org.apache.ivy:ivy:${project.ivyVersion}"
-        classpath "org.apereo.cas:cas-server-core-configuration-metadata-repository:${project.'cas.version'}"
+        classpath "org.apereo.cas:cas-server-support-configuration-metadata-repository:${project.'cas.version'}"
     }
 }
 apply plugin: "de.undercouch.download"
 
-task run(group: "build", description: "Run the CAS web application in embedded container mode") {
-    dependsOn 'build'
-    doLast {
-        def casRunArgs = Arrays.asList("-server -noverify -Xmx2048M -XX:+TieredCompilation -XX:TieredStopAtLevel=1".split(" "))
-        project.javaexec {
-            jvmArgs = casRunArgs
-            classpath = project.files("build/libs/cas.war")
-            systemProperties = System.properties
-            logger.info "Started ${commandLine}"
-        }
-    }
+tasks.register('run', JavaExec) {
+    group = "CAS"
+    description = "Run the CAS web application in embedded container mode"
+    jvmArgs = [
+        "-server",
+        "-Xmx2048M",
+        "-XX:+TieredCompilation",
+        "-XX:TieredStopAtLevel=1"
+    ]
+    debug = false
+    systemProperties = System.properties
+    classpath = files("$buildDir/libs/cas.war")
 }
 
 task setExecutable(group: "CAS", description: "Configure the project to run in executable mode") {
@@ -64,19 +66,18 @@ task executable(type: Exec, group: "CAS", description: "Run the CAS web applicat
 }
 
 
-task debug(group: "CAS", description: "Debug the CAS web application in embedded mode on port 5005") {
-    dependsOn 'build'
-    doLast {
-        logger.info "Debugging process is started in a suspended state, listening on port 5005."
-        def casArgs = Arrays.asList("-Xmx2048M".split(" "))
-        project.javaexec {
-            jvmArgs = casArgs
-            debug = true
-            classpath = project.files("build/libs/cas.war")
-            systemProperties = System.properties
-            logger.info "Started ${commandLine}"
-        }
-    }
+tasks.register('debug', JavaExec) {
+    group = "CAS"
+    description = "Debug the CAS web application in embedded container mode on port 5005"
+    jvmArgs = [
+        "-server",
+        "-Xmx2048M",
+        "-XX:+TieredCompilation",
+        "-XX:TieredStopAtLevel=1"
+    ]
+    debug = true
+    systemProperties = System.properties
+    classpath = files("$buildDir/libs/cas.war")
 }
 
 task showConfiguration(group: "CAS", description: "Show configurations for each dependency, etc") {
