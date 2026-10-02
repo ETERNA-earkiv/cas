@@ -130,6 +130,21 @@ bootWar {
             if (project.hasProperty("tomcatVersion")) {
                 excludeArtifacts += "WEB-INF/lib/tomcat-*.jar"
             }
+            /*
+                Drop the Spring jars bundled in the CAS webapp war at the versions pinned by the CAS BOM,
+                so only the patched versions resolved via build.gradle end up in the final war.
+                Update these when changing cas.version.
+            */
+            excludeArtifacts += ["WEB-INF/lib/spring-boot-*-3.5.6.jar", "WEB-INF/lib/spring-boot-3.5.6.jar",
+                                 // superseded by newer versions managed by the Spring Boot BOM
+                                 "WEB-INF/lib/classmate-1.7.0.jar", "WEB-INF/lib/jboss-logging-3.6.1.Final.jar",
+                                 "WEB-INF/lib/reactor-core-3.7.11.jar"]
+            if (project.hasProperty("springFrameworkVersion")) {
+                excludeArtifacts += "WEB-INF/lib/spring-*-6.2.11.jar"
+            }
+            if (project.hasProperty("springSecurityVersion")) {
+                excludeArtifacts += "WEB-INF/lib/spring-security-*-6.5.5.jar"
+            }
             excludes = excludeArtifacts
 
             /*
