@@ -5,8 +5,9 @@ WAR Overlay Type: `cas-overlay`
 
 # Versions
 
-- CAS Server `7.3.4`
-- Spring Boot `3.5.6`
+- CAS Server `7.3.8.3`
+- Spring Boot `3.5.16` (Spring Framework `6.2.19`, Spring Security `6.5.11`)
+- Apache Tomcat `11.0.26`
 - Gradle `9.1.0`
 - JDK `21`
 - Base image `eclipse-temurin:21-jre-alpine`

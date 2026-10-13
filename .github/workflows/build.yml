@@ -55,10 +55,12 @@ jobs:
         with:
           images: |
             ghcr.io/${{ env.REPOSITORY_OWNER_LC }}/${{ steps.properties.outputs.containerImageName }}
+          # CAS uses 4-part versions (e.g. 7.3.8.3) which are not valid semver, so match the tag directly.
+          # Pre-release tags (e.g. v7.3.8.3-rc1) only get their exact tag, not the moving vX.Y / vX tags.
           tags: |
-            type=semver,pattern=v{{version }}
-            type=semver,pattern=v{{major }}.{{minor }}
-            type=semver,pattern=v{{major }}
+            type=ref,event=tag,priority=1000
+            type=match,pattern=^(v\d+\.\d+)\.\d+(\.\d+)?$,group=1
+            type=match,pattern=^(v\d+)\.\d+\.\d+(\.\d+)?$,group=1
           flavor: |
             latest=false
 

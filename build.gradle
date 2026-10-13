@@ -116,6 +116,19 @@ configurations {
                     }
                 }
             }
+
+            eachDependency { DependencyResolveDetails dependency ->
+                def requested = dependency.requested
+                if (requested.group == "org.springframework.boot") {
+                    dependency.useVersion("${springBootVersion}")
+                } else if (project.hasProperty("springFrameworkVersion")
+                        && requested.group == "org.springframework" && requested.version?.startsWith("6.2.")) {
+                    dependency.useVersion("${springFrameworkVersion}")
+                } else if (project.hasProperty("springSecurityVersion")
+                        && requested.group == "org.springframework.security" && requested.version?.startsWith("6.5.")) {
+                    dependency.useVersion("${springSecurityVersion}")
+                }
+            }
         }
         exclude(group: "cglib", module: "cglib")
         exclude(group: "cglib", module: "cglib-full")
@@ -235,6 +248,7 @@ tasks.register("casBuildDockerImage", DockerBuildImage) {
 
     def imageTag = "${project.'cas.version'}"
     inputDir = project.projectDir
+    pull = true
     images.add("apereo/cas:${imageTag}${imageTagPostFix}")
     images.add("apereo/cas:latest${imageTagPostFix}")
     if (dockerUsername != null && dockerPassword != null) {
@@ -286,7 +300,12 @@ dependencies {
     if (appServer == '-tomcat') {
         implementation "org.apereo.cas:cas-server-webapp-init-tomcat"
     }
-    
+    // Bundled in the CAS webapp war; excluded from the overlay and re-added here at the patched Spring Boot version
+    implementation("org.springframework.boot:spring-boot-properties-migrator") {
+        // CAS ships org.json; android-json duplicates its classes
+        exclude group: "com.vaadin.external.google", module: "android-json"
+    }
+
     developmentOnly "org.springframework.boot:spring-boot-devtools:${project.springBootVersion}"
     // developmentOnly "org.springframework.boot:spring-boot-docker-compose:${project.springBootVersion}"
         
